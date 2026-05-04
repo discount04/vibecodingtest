@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘 뭐 먹지? - 저녁 메뉴 추천</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .menu-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .menu-card:active {
+            transform: scale(0.95);
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+        }
+
+        .btn-touch {
+            touch-action: manipulation;
+        }
+
+        /* 호버 스타일 정의 */
+        .category-btn {
+            transition: all 0.2s ease;
+        }
+
+        /* 비활성 버튼에 마우스 호버 시 */
+        .category-btn:not(.active-btn):hover {
+            background-color: #fff7ed; /* orange-50 */
+            border-color: #fed7aa; /* orange-200 */
+            transform: translateY(-2px);
+        }
+
+        /* 스크롤바 커스텀 */
+        #menu-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        #menu-list::-webkit-scrollbar-thumb {
+            background-color: #e2e8f0;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <!-- Header -->
+    <header class="gradient-bg text-white py-8 px-4 text-center shadow-lg mb-6">
+        <h1 class="text-3xl font-bold mb-2">오늘 뭐 먹지? 🍽️</h1>
+        <p class="opacity-90">결정 장애를 해결해드리는 저녁 메뉴 추천기</p>
+    </header>
+
+    <main class="max-w-md mx-auto px-4">
+        
+        <!-- Random Recommendation Section -->
+        <section class="bg-white rounded-3xl shadow-sm p-6 mb-6 text-center border border-gray-100">
+            <h2 class="text-sm font-bold mb-1 text-gray-400 uppercase tracking-wider">Random Choice</h2>
+            <div id="result-display" class="text-4xl font-extrabold text-orange-500 my-8 min-h-[64px] flex items-center justify-center">
+                ? ? ?
+            </div>
+            <button id="random-btn" class="btn-touch w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold text-lg shadow-lg shadow-orange-200 transition-all active:scale-[0.98]">
+                메뉴 뽑기 시작!
+            </button>
+        </section>
+
+        <!-- Category Filter (Hierarchy Adjusted) -->
+        <section class="mb-8">
+            <div class="flex items-center justify-between mb-3 px-1">
+                <h2 class="text-lg font-bold text-gray-800">카테고리 필터</h2>
+                <!-- '전체' 버튼 -->
+                <button onclick="filterCategory('all')" id="all-btn" class="category-btn active-btn px-4 py-1.5 rounded-full text-sm font-bold transition-all bg-orange-500 text-white shadow-md hover:bg-orange-600">
+                    전체보기
+                </button>
+            </div>
+            
+            <!-- 세부 카테고리 그룹 -->
+            <div class="grid grid-cols-5 gap-2">
+                <button onclick="filterCategory('한식')" class="category-btn bg-white border border-gray-200 py-2.5 rounded-xl text-sm font-medium text-gray-600 active:bg-gray-50">한식</button>
+                <button onclick="filterCategory('일식')" class="category-btn bg-white border border-gray-200 py-2.5 rounded-xl text-sm font-medium text-gray-600 active:bg-gray-50">일식</button>
+                <button onclick="filterCategory('중식')" class="category-btn bg-white border border-gray-200 py-2.5 rounded-xl text-sm font-medium text-gray-600 active:bg-gray-50">중식</button>
+                <button onclick="filterCategory('양식')" class="category-btn bg-white border border-gray-200 py-2.5 rounded-xl text-sm font-medium text-gray-600 active:bg-gray-50">양식</button>
+                <button onclick="filterCategory('분식')" class="category-btn bg-white border border-gray-200 py-2.5 rounded-xl text-sm font-medium text-gray-600 active:bg-gray-50">분식</button>
+            </div>
+        </section>
+
+        <!-- Menu List Section -->
+        <section class="bg-white rounded-3xl shadow-sm p-6 border border-gray-100">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">메뉴 목록</h2>
+                <span id="menu-count" class="px-2.5 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded-lg">20</span>
+            </div>
+            <div id="menu-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                <!-- 리스트 아이템이 여기에 동적으로 추가됩니다 -->
+            </div>
+            
+            <!-- Custom Add -->
+            <div class="mt-6 pt-6 border-t border-dashed border-gray-200">
+                <div class="flex gap-2">
+                    <input type="text" id="custom-input" placeholder="새로운 메뉴 입력..." class="flex-1 px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-orange-300 transition-all text-sm">
+                    <button id="add-btn" class="bg-gray-800 text-white px-5 py-3 rounded-xl font-bold text-sm active:scale-95 transition-transform hover:bg-black">추가</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal for Result -->
+    <div id="result-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-6">
+        <div class="bg-white rounded-[2rem] w-full max-w-xs p-8 text-center shadow-2xl transform transition-all scale-100">
+            <div class="text-5xl mb-4">✨</div>
+            <h3 class="text-gray-400 font-bold mb-1">오늘 당신을 위한 메뉴</h3>
+            <div id="modal-menu-name" class="text-3xl font-black text-gray-900 mb-8"></div>
+            
+            <div class="space-y-2">
+                <button onclick="confirmMenu()" class="w-full py-4 bg-orange-500 text-white rounded-2xl font-bold shadow-lg shadow-orange-100 active:bg-orange-600 transition-colors">이걸로 결정!</button>
+                <button onclick="closeModal()" class="w-full py-4 bg-gray-50 text-gray-500 rounded-2xl font-bold hover:bg-gray-100 transition-colors">다시 정하기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const initialMenus = [
+            { name: "김치찌개", category: "한식" },
+            { name: "삼겹살", category: "한식" },
+            { name: "비빔밥", category: "한식" },
+            { name: "불고기", category: "한식" },
+            { name: "초밥", category: "일식" },
+            { name: "라멘", category: "일식" },
+            { name: "돈카츠", category: "일식" },
+            { name: "짜장면", category: "중식" },
+            { name: "짬뽕", category: "중식" },
+            { name: "탕수육", category: "중식" },
+            { name: "파스타", category: "양식" },
+            { name: "스테이크", category: "양식" },
+            { name: "피자", category: "양식" },
+            { name: "떡볶이", category: "분식" },
+            { name: "김밥", category: "분식" },
+            { name: "햄버거", category: "양식" },
+            { name: "치킨", category: "기타" },
+            { name: "족발", category: "한식" },
+            { name: "마라탕", category: "중식" },
+            { name: "쌀국수", category: "기타" }
+        ];
+
+        let currentMenus = [...initialMenus];
+        let filter = 'all';
+
+        const resultDisplay = document.getElementById('result-display');
+        const randomBtn = document.getElementById('random-btn');
+        const menuList = document.getElementById('menu-list');
+        const menuCount = document.getElementById('menu-count');
+        const customInput = document.getElementById('custom-input');
+        const addBtn = document.getElementById('add-btn');
+        const resultModal = document.getElementById('result-modal');
+        const modalMenuName = document.getElementById('modal-menu-name');
+
+        function renderList() {
+            const filtered = filter === 'all' 
+                ? currentMenus 
+                : currentMenus.filter(m => m.category === filter);
+            
+            menuList.innerHTML = '';
+            filtered.forEach((menu, index) => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-3.5 bg-gray-50 rounded-2xl border border-gray-100 menu-card';
+                div.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-bold text-gray-800 text-sm">${menu.name}</span>
+                        <span class="text-[10px] text-orange-400 font-bold uppercase">${menu.category}</span>
+                    </div>
+                    <button onclick="removeMenu(${index})" class="text-gray-300 hover:text-red-400 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                `;
+                menuList.appendChild(div);
+            });
+            menuCount.innerText = filtered.length;
+        }
+
+        function filterCategory(cat) {
+            filter = cat;
+            const buttons = document.querySelectorAll('.category-btn');
+            
+            buttons.forEach(btn => {
+                const isAllBtn = btn.id === 'all-btn';
+                btn.classList.remove('active-btn');
+                
+                if (isAllBtn) {
+                    if (cat === 'all') {
+                        btn.className = 'category-btn active-btn px-4 py-1.5 rounded-full text-sm font-bold transition-all bg-orange-500 text-white shadow-md hover:bg-orange-600';
+                    } else {
+                        btn.className = 'category-btn px-4 py-1.5 rounded-full text-sm font-bold transition-all bg-gray-100 text-gray-400 hover:bg-gray-200';
+                    }
+                } else {
+                    if (btn.innerText === cat) {
+                        btn.classList.add('active-btn', 'border-orange-500', 'text-orange-500', 'bg-orange-50', 'ring-1', 'ring-orange-500');
+                        btn.classList.remove('border-gray-200', 'text-gray-600', 'bg-white');
+                    } else {
+                        btn.classList.remove('active-btn', 'border-orange-500', 'text-orange-500', 'bg-orange-50', 'ring-1', 'ring-orange-500');
+                        btn.classList.add('border-gray-200', 'text-gray-600', 'bg-white');
+                    }
+                }
+            });
+            renderList();
+        }
+
+        function removeMenu(index) {
+            const filtered = filter === 'all' 
+                ? currentMenus 
+                : currentMenus.filter(m => m.category === filter);
+            const target = filtered[index];
+            const realIndex = currentMenus.indexOf(target);
+            
+            currentMenus.splice(realIndex, 1);
+            renderList();
+        }
+
+        addBtn.onclick = () => {
+            const val = customInput.value.trim();
+            if(val) {
+                currentMenus.push({ name: val, category: "직접 추가" });
+                customInput.value = '';
+                renderList();
+            }
+        };
+
+        let isSpinning = false;
+        randomBtn.onclick = () => {
+            const filtered = filter === 'all' 
+                ? currentMenus 
+                : currentMenus.filter(m => m.category === filter);
+
+            if (isSpinning || filtered.length === 0) return;
+            
+            isSpinning = true;
+            randomBtn.disabled = true;
+            randomBtn.innerText = "메뉴를 고르고 있어요...";
+            
+            let counter = 0;
+            const interval = setInterval(() => {
+                const tempIndex = Math.floor(Math.random() * filtered.length);
+                resultDisplay.innerText = filtered[tempIndex].name;
+                counter++;
+                
+                if(counter > 20) {
+                    clearInterval(interval);
+                    const finalIndex = Math.floor(Math.random() * filtered.length);
+                    const finalMenu = filtered[finalIndex].name;
+                    resultDisplay.innerText = finalMenu;
+                    
+                    setTimeout(() => {
+                        modalMenuName.innerText = finalMenu;
+                        resultModal.classList.remove('hidden');
+                        isSpinning = false;
+                        randomBtn.disabled = false;
+                        randomBtn.innerText = "메뉴 뽑기 시작!";
+                    }, 500);
+                }
+            }, 60);
+        };
+
+        function closeModal() {
+            resultModal.classList.add('hidden');
+        }
+
+        function confirmMenu() {
+            resultModal.classList.add('hidden');
+            resultDisplay.innerHTML = `<span class="text-2xl text-gray-800">오늘은</span> <br> ${modalMenuName.innerText}!`;
+        }
+
+        // Initialize
+        renderList();
+    </script>
+</body>
+</html>
